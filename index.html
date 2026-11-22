@@ -1,0 +1,1390 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gutenberg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;700&family=JetBrains+Mono:wght@400;500&family=EB+Garamond:wght@400;600&family=Playfair+Display:wght@400;700&family=DM+Serif+Display&family=Cormorant+Garamond:wght@500;700&family=Libre+Baskerville:wght@400;700&family=Space+Grotesk:wght@400;700&family=Archivo+Black&family=Bebas+Neue&display=swap">
+<style>
+  /* Same language as Screw Around: light paper control panel on the left, the stage on the right.
+     Light grotesk set huge and tight for display, small grotesk for labels, monospace for values. */
+  :root{
+    color-scheme: light;
+    --paper:#f9f8f5; --ink:#333333; --ink-strong:#101010; --well:#efeee9; --muted:#8b887f; --rule:rgba(51,51,51,.85);
+    --stage:#f2f2f2; --stage-ink:#111111; --stage-muted:rgba(17,17,17,.58);
+    --mono:"JetBrains Mono", SFMono-Regular, Consolas, Menlo, monospace;
+    --grot:"Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:12.5px/1.15 var(--mono);text-transform:uppercase;letter-spacing:.02em}
+  button,select,input,option,textarea{font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+  button{background:none;border:0;padding:0;cursor:pointer;text-align:left}
+  :focus-visible{outline:1px dotted var(--ink-strong);outline-offset:2px}
+
+  #app{display:grid;grid-template-columns:316px minmax(0,1fr);height:100%}
+
+  /* ---- control panel ---- */
+  #panel{display:flex;flex-direction:column;min-height:0;border-right:1px dotted var(--rule);padding-left:env(safe-area-inset-left, 0px)}
+  #controls{flex:1;overflow-y:auto;padding:6px 0 18px}
+  .brand{padding:14px 10px 12px;border-bottom:1px dotted var(--rule);font-family:var(--grot)}
+  .brand-big{display:block;font-weight:300;font-size:52px;line-height:.86;letter-spacing:-.055em;margin-left:-3px}
+  .brand-sub{display:block;margin-top:10px;font:10.5px var(--grot);letter-spacing:.03em;color:var(--muted)}
+  .grp{margin-top:16px}
+  .grp h3{display:flex;align-items:baseline;gap:6px;margin:0;font:300 21px/1 var(--grot);letter-spacing:-.035em;padding:0 8px;position:relative}
+  .grp h3::after{content:"";flex:1;border-top:1px dotted var(--rule);order:1;margin:0 2px;align-self:center}
+  .grp h3 span{background:var(--paper);order:0}
+  .grp h3 .fold{order:3;width:14px;text-align:center;font:12px var(--mono);letter-spacing:0}
+  .grp h3 .reset{order:2;width:16px;text-align:center;font:13px var(--mono);letter-spacing:0;color:var(--muted)}
+  .grp h3 .reset:hover{color:var(--ink-strong)}
+  .row label,.check,.frow > span:first-child,.exportbtn > span,.lab{font-family:var(--grot);font-size:11.5px;letter-spacing:.02em}
+  .grp-body{background:var(--well);padding:2px 8px 8px;margin-top:6px}
+  .grp.closed .grp-body{display:none}
+  .row{padding-top:10px}
+  .row .line{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .row label{flex:none}
+  .num{display:inline-flex;align-items:baseline;gap:3px;min-width:0}
+  .num input{width:7ch;background:none;border:0;padding:0;text-align:right;border-bottom:1px solid transparent}
+  .num input:focus{outline:none;border-bottom:1px dotted var(--ink)}
+  .unit{color:var(--muted);font-size:11px}
+  select{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0 0 1px;text-align:right;text-align-last:right;
+    cursor:pointer;min-width:0;max-width:70%;text-overflow:ellipsis;text-decoration:underline dotted;text-underline-offset:3px}
+  input[type=color]{-webkit-appearance:none;appearance:none;width:16px;height:16px;border:1px solid var(--ink);padding:0;background:none;cursor:pointer}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  input[type=color]::-webkit-color-swatch{border:0}
+  input[type=color]::-moz-color-swatch{border:0}
+  .txt,.area{display:block;width:100%;margin-top:4px;background:var(--paper);border:1px dotted var(--rule);padding:5px 6px 4px;
+    text-transform:none;font:12.5px/1.3 var(--grot);letter-spacing:0}
+  .area{min-height:70px;resize:vertical}
+  .txt:focus,.area:focus{outline:none;border-style:solid}
+  .check{display:block;width:100%;padding:0}
+  .check:hover{color:var(--ink-strong)}
+  .filebox{display:flex;gap:6px;align-items:center;max-width:66%;min-width:0}
+  .filebtn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px var(--mono);text-transform:none;
+    border:1px dotted var(--ink);border-radius:999px;padding:4px 10px 3px}
+  .filebtn:hover{background:var(--ink);color:var(--paper);border-style:solid}
+  .clear{font:13px var(--mono);color:var(--muted)}
+  .clear:hover{color:var(--ink-strong)}
+  .btns{display:flex;gap:6px;flex-wrap:wrap}
+  .btns button,.tools button{border:1px dotted var(--ink);border-radius:999px;padding:5px 11px 4px;font:11px var(--grot);letter-spacing:.02em}
+  .btns button:hover,.tools button:hover{background:var(--ink);color:var(--paper);border-style:solid}
+  .readout{font:11px var(--mono);color:var(--muted);padding-top:8px;line-height:1.45}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:2px 0 0;background:transparent;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:rgba(51,51,51,.45)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:1px;height:10px;margin-top:-4.5px;background:var(--ink);border:0;border-radius:0}
+  input[type=range]:hover::-webkit-slider-runnable-track,input[type=range]:focus::-webkit-slider-runnable-track{background:var(--ink)}
+  input[type=range]::-moz-range-track{height:1px;background:rgba(51,51,51,.45)}
+  input[type=range]::-moz-range-thumb{width:1px;height:10px;background:var(--ink);border:0;border-radius:0}
+  input[type=range]:focus{outline:none}
+  input[type=range]:focus-visible::-webkit-slider-thumb{width:3px}
+
+  .off{opacity:.35;pointer-events:none}
+
+  footer{border-top:1px dotted var(--rule);padding:10px 8px calc(10px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;gap:9px;background:var(--paper)}
+  .frow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .tools{gap:6px;justify-content:flex-start;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px dotted var(--rule)}
+  .fmt{display:flex;gap:12px}
+  .fmt button{color:var(--muted)}
+  .fmt button[aria-pressed="true"]{color:var(--ink-strong);text-decoration:underline;text-underline-offset:3px}
+  .exportbtn{display:flex;justify-content:space-between;align-items:center;height:40px;padding:0 10px;background:var(--ink);color:var(--paper)}
+  .exportbtn:hover{background:var(--ink-strong)}
+  kbd{font:10px var(--mono);border:1px solid rgba(249,248,245,.45);padding:2px 4px}
+  #status{min-height:14px;font-size:11px;color:var(--muted)}
+
+  /* ---- stage ---- */
+  main{position:relative;min-width:0;min-height:0;background:var(--stage);color:var(--stage-ink);overflow:hidden}
+  main canvas{display:block;width:100%;height:100%}
+  #bitmap{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;image-rendering:pixelated}
+  #label{position:absolute;left:22px;top:20px;pointer-events:none;max-width:calc(100% - 44px);font-family:var(--grot)}
+  #label .kicker{display:block;font-weight:300;font-size:21px;line-height:1;letter-spacing:-.035em}
+  #label .big{display:block;font-weight:300;font-size:52px;line-height:.86;letter-spacing:-.055em;margin:.1em 0 0 -.03em;white-space:nowrap}
+  #label .fine{display:block;font-size:10.5px;line-height:1.35;letter-spacing:.02em;margin-top:14px;max-width:40ch;color:var(--stage-muted)}
+  #hint{position:absolute;right:max(18px, env(safe-area-inset-right, 0px));bottom:16px;color:var(--stage-muted);font:10.5px var(--grot);letter-spacing:.03em;pointer-events:none}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--stage-muted)}
+
+  .sundial{display:block;width:150px;height:150px;margin:8px auto 2px;cursor:grab;touch-action:none}
+  .sundial:active{cursor:grabbing}
+  .sundial .path{fill:none;stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3}
+  .sundial .subject{fill:var(--paper);stroke:var(--ink);stroke-width:1}
+  .sundial .ray{stroke:var(--ink);stroke-width:1;opacity:.35}
+  .sundial .sun{fill:var(--ink);stroke:var(--paper);stroke-width:2}
+  .sundial .tag{font:9px var(--mono);letter-spacing:.08em;fill:var(--muted);text-anchor:middle}
+
+  @media (max-width:760px){
+    #app{display:flex;flex-direction:column;height:auto}
+    main{height:45vh;height:45svh;order:1;border-bottom:1px dotted var(--rule);position:sticky;top:env(safe-area-inset-top, 0px);z-index:5}
+    #label{left:14px;top:12px}
+    #label .big{font-size:30px}
+    #label .fine{display:none}
+    #panel{order:2;border:0;padding-right:env(safe-area-inset-right, 0px)}
+    #controls{overflow:visible}
+    #hint{display:none}
+  }
+</style>
+<script>
+  // If the 3D engine fails to start, say why on the loading screen instead of waiting forever.
+  (function () {
+    const show = msg => { const el = document.getElementById('loading'); if (el && !el.dataset.final) el.textContent = msg; };
+    addEventListener('error', e => {
+      const ours = (e.target && e.target.tagName === 'SCRIPT') || (e.filename && (e.filename.startsWith(location.origin) || e.filename.includes('cdn.jsdelivr.net')));
+      if (ours) show('3D engine failed to start: ' + (e.message || 'a script could not load') + '. Reload the page to try again.');
+    }, true);
+    setTimeout(() => show('The 3D engine is taking too long to load. Check your connection and reload the page.'), 15000);
+  })();
+</script>
+
+<div id="app">
+  <aside id="panel" aria-label="Controls">
+    <div id="controls">
+      <header class="brand">
+        <span class="brand-big">Guten</span>
+        <span class="brand-big">berg</span>
+        <span class="brand-sub">Book mockups, rendered</span>
+      </header>
+    </div>
+    <footer>
+      <div class="frow tools">
+        <button type="button" id="fit">Fit view</button>
+        <button type="button" id="random">Randomize</button>
+        <button type="button" id="reset">Reset</button>
+        <button type="button" id="saveDesign">Save design</button>
+        <button type="button" id="openDesign">Open design</button>
+        <input type="file" id="designFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="frow"><span>Size</span><select id="exRes" aria-label="Export size"></select></div>
+      <div class="frow"><span>Aspect</span><select id="exAspect" aria-label="Export aspect ratio"></select></div>
+      <div class="frow"><span>Framing</span><select id="exFrame" aria-label="Export framing"><option value="fit">Fit book</option><option value="view">As on screen</option></select></div>
+      <div class="frow"><span>Background</span>
+        <span class="fmt"><button type="button" data-bg="transparent" aria-pressed="true">Transparent</button><button type="button" data-bg="colour" aria-pressed="false">Colour</button></span></div>
+      <button type="button" class="exportbtn" id="export"><span>Export PNG</span><kbd>cmd + S</kbd></button>
+      <div id="status" role="status"></div>
+    </footer>
+  </aside>
+  <main>
+    <div id="loading">Loading 3D engine…</div>
+    <canvas id="bitmap" hidden></canvas>
+    <div id="label"></div>
+    <div id="hint">Drag orbit · right-drag pan · scroll zoom</div>
+  </main>
+</div>
+
+<script type="module">
+// Full CDN URLs, no import map: the hosted viewer can load scripts before an import map,
+// which makes the browser ignore it. These ESM builds all share one copy of three.
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/+esm';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js/+esm';
+import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js/+esm';
+
+const $ = id => document.getElementById(id);
+const D2R = Math.PI / 180;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+/* ================= configuration ================= */
+// trim sizes in mm (width × height of the page block)
+const TRIMS = [['custom', 'Custom'], ['a6', 'A6 · 105 × 148', 105, 148], ['pocket', 'Pocket · 110 × 178', 110, 178],
+  ['5x8', '5 × 8 in', 127, 203], ['bfmt', 'B-format · 129 × 198', 129, 198], ['a5', 'A5 · 148 × 210', 148, 210],
+  ['6x9', '6 × 9 in', 152, 229], ['royal', 'Royal · 156 × 234', 156, 234], ['b5', 'B5 · 176 × 250', 176, 250],
+  ['7x10', '7 × 10 in', 178, 254], ['sq', 'Square · 216 × 216', 216, 216], ['a4', 'A4 · 210 × 297', 210, 297],
+  ['coffee', 'Coffee table · 250 × 300', 250, 300], ['land', 'Landscape · 280 × 210', 280, 210]];
+// thickness of one leaf (two pages) in mm
+const PAPERS = [['custom', 'Custom'], ['bible', 'Bible 40 gsm', 0.045], ['news', 'Newsprint 52 gsm', 0.075],
+  ['unc80', 'Uncoated 80 gsm', 0.1], ['bulky', 'Bookwove 70 gsm, bulky', 0.12], ['silk', 'Coated silk 115 gsm', 0.095],
+  ['coat150', 'Coated 150 gsm', 0.135], ['art', 'Art paper 170 gsm', 0.17], ['board', 'Board book 1 mm', 1.0]];
+const FONTS = ['EB Garamond', 'Playfair Display', 'DM Serif Display', 'Cormorant Garamond', 'Libre Baskerville',
+  'Inter Tight', 'Space Grotesk', 'Archivo Black', 'Bebas Neue', 'JetBrains Mono'];
+const FINISHES = {
+  matte:   {name: 'Matte laminate',  rough: 0.62},
+  gloss:   {name: 'Gloss laminate',  rough: 0.32, coat: 1, coatRough: 0.03},
+  soft:    {name: 'Soft-touch',      rough: 0.88, tex: 'grain', tile: 6, strength: 0.08},
+  uncoated:{name: 'Uncoated paper',  rough: 0.95, tex: 'grain', tile: 12, strength: 0.18},
+  linen:   {name: 'Linen embossed',  rough: 0.72, tex: 'linen', tile: 7, strength: 0.55},
+  cloth:   {name: 'Book cloth',      rough: 0.9,  tex: 'cloth', tile: 4, strength: 0.7, sheen: 0.6},
+  leather: {name: 'Leather',         rough: 0.5,  tex: 'leather', tile: 40, strength: 0.75, coat: 0.25, coatRough: 0.35},
+};
+const FOILS = [['ink', 'Printed ink'], ['gold', 'Gold foil'], ['silver', 'Silver foil'], ['copper', 'Copper foil'], ['spot', 'Spot gloss (UV)']];
+const FOIL_COL = {gold: '#d9b45a', silver: '#d6d8dc', copper: '#c98654'};
+const DEFAULTS = {
+  style: 'render', pose: 'standing',
+  binding: 'hard', trim: '6x9', width: 152, height: 229, pages: 320, paper: 'unc80', leaf: 0.1,
+  board: 2.5, overhang: 3, spine: 'round', rounding: 40, joint: true,
+  openAngle: 0, openAt: 50, curl: 50,
+  artMode: 'separate', bleed: 3,
+  frontColor: '#1d3a57', spineColor: '#1d3a57', backColor: '#1d3a57',
+  title: 'The Movable Type', subtitle: 'A novel', author: 'Johannes Gensfleisch',
+  font: 'EB Garamond', weight: '600', textColor: '#efe4cc', titleSize: 100, titlePos: 28, tracking: 0, caps: false,
+  align: 'center', spineText: true,
+  blurb: 'In a cold workshop in Mainz, a goldsmith with debts and a dangerous idea sets out to cast letters in metal, one at a time, until a whole page can be pressed at once.\n\n“A quiet, luminous book about patience and ink.”',
+  barcode: true,
+  finish: 'matte', texStrength: 100, foil: 'ink',
+  paperColor: '#f4efe3', edge: 'plain', edgeColor: '#a3262a', content: 'text', endColor: '#c9b48a',
+  headband: true, headbandColor: '#b8312f', ribbon: false, ribbonColor: '#7a1f24', ribbonLen: 70,
+  bmMethod: 'atkinson', bmThreshold: 50, bmAmount: 80, bmScale: 1,
+  sunEl: 45, sunAz: 320, sun: 100, ambient: 70, softness: 45, shadow: 45, exposure: 100,
+  bg: '#f2f2f2', focal: 50,
+};
+const SCHEMA = [
+  {section: 'Visualization'},
+  {key: 'style', label: 'Style', type: 'select', options: [['render', 'Rendering'], ['bitmap', 'Bitmap'], ['outline', 'Outline']]},
+  {key: 'pose', label: 'Pose', type: 'select', options: [['standing', 'Standing'], ['lying', 'Lying flat']]},
+  {section: 'Bitmap', show: s => s.style === 'bitmap'},
+  {key: 'bmMethod', label: 'Dithering', type: 'select', options: [['atkinson', 'Atkinson'], ['jjn', 'Jarvis-Judice-Ninke'], ['stucki', 'Stucki'], ['bayer', 'Ordered (Bayer)']]},
+  {key: 'bmThreshold', label: 'Threshold', type: 'range', min: 0, max: 100, step: 1},
+  {key: 'bmAmount', label: 'Diffusion', type: 'range', min: 0, max: 100, step: 1, unit: '%', show: s => s.bmMethod !== 'bayer'},
+  {key: 'bmScale', label: 'Dot size', type: 'range', min: 1, max: 6, step: 1, unit: 'px'},
+  {section: 'Book'},
+  {key: 'binding', label: 'Binding', type: 'select', options: [['hard', 'Hardcover'], ['paper', 'Paperback']]},
+  {key: 'trim', label: 'Trim size', type: 'select', options: TRIMS.map(t => [t[0], t[1]])},
+  {key: 'width', label: 'Width', type: 'range', min: 40, max: 400, step: 1, unit: 'mm'},
+  {key: 'height', label: 'Height', type: 'range', min: 40, max: 420, step: 1, unit: 'mm'},
+  {key: 'pages', label: 'Pages', type: 'range', min: 4, max: 1600, step: 2, unit: 'pp'},
+  {key: 'paper', label: 'Paper', type: 'select', options: PAPERS.map(p => [p[0], p[1]])},
+  {key: 'leaf', label: 'Leaf thickness', type: 'range', min: 0.03, max: 1.2, step: 0.005, unit: 'mm'},
+  {type: 'readout', id: 'specs'},
+  {section: 'Case', show: s => s.binding === 'hard'},
+  {key: 'board', label: 'Board thickness', type: 'range', min: 1, max: 5, step: 0.1, unit: 'mm'},
+  {key: 'overhang', label: 'Overhang', type: 'range', min: 0, max: 8, step: 0.5, unit: 'mm'},
+  {key: 'spine', label: 'Spine', type: 'select', options: [['round', 'Rounded'], ['square', 'Square']]},
+  {key: 'rounding', label: 'Rounding', type: 'range', min: 0, max: 100, step: 1, unit: '%', show: s => s.spine === 'round'},
+  {key: 'joint', label: 'Hinge groove', type: 'check'},
+  {section: 'Open'},
+  {key: 'openAngle', label: 'Opening', type: 'range', min: 0, max: 180, step: 1, unit: '°'},
+  {key: 'openAt', label: 'Open at', type: 'range', min: 0, max: 100, step: 1, unit: '%'},
+  {key: 'curl', label: 'Page curve', type: 'range', min: 0, max: 100, step: 1, unit: '%'},
+  {section: 'Cover art'},
+  {key: 'artMode', label: 'Artwork', type: 'select', options: [['separate', 'Front, spine, back'], ['wrap', 'One cover spread']]},
+  {key: 'img_wrap', label: 'Spread file', type: 'file', show: s => s.artMode === 'wrap'},
+  {key: 'bleed', label: 'Bleed in file', type: 'range', min: 0, max: 25, step: 0.5, unit: 'mm', show: s => s.artMode === 'wrap'},
+  {key: 'img_front', label: 'Front image', type: 'file', show: s => s.artMode === 'separate'},
+  {key: 'img_spine', label: 'Spine image', type: 'file', show: s => s.artMode === 'separate'},
+  {key: 'img_back', label: 'Back image', type: 'file', show: s => s.artMode === 'separate'},
+  {key: 'frontColor', label: 'Front colour', type: 'color'},
+  {key: 'spineColor', label: 'Spine colour', type: 'color'},
+  {key: 'backColor', label: 'Back colour', type: 'color'},
+  {type: 'buttons', buttons: [['Download cover template (SVG)', () => saveTemplate()]]},
+  {section: 'Typography'},
+  {key: 'title', label: 'Title', type: 'text'},
+  {key: 'subtitle', label: 'Subtitle', type: 'text'},
+  {key: 'author', label: 'Author', type: 'text'},
+  {key: 'font', label: 'Typeface', type: 'select', options: FONTS.map(f => [f, f])},
+  {key: 'weight', label: 'Weight', type: 'select', options: [['400', 'Regular'], ['600', 'Semibold'], ['700', 'Bold']]},
+  {key: 'textColor', label: 'Text colour', type: 'color'},
+  {key: 'titleSize', label: 'Title size', type: 'range', min: 30, max: 250, step: 1, unit: '%'},
+  {key: 'titlePos', label: 'Title position', type: 'range', min: 5, max: 85, step: 1, unit: '%'},
+  {key: 'tracking', label: 'Letter spacing', type: 'range', min: -10, max: 40, step: 1, unit: '‰'},
+  {key: 'align', label: 'Align', type: 'select', options: [['center', 'Centre'], ['left', 'Left']]},
+  {key: 'caps', label: 'All caps title', type: 'check'},
+  {key: 'spineText', label: 'Spine lettering', type: 'check'},
+  {key: 'blurb', label: 'Back cover text', type: 'textarea'},
+  {key: 'barcode', label: 'Barcode', type: 'check'},
+  {section: 'Finish'},
+  {key: 'finish', label: 'Cover', type: 'select', options: Object.entries(FINISHES).map(([k, f]) => [k, f.name])},
+  {key: 'texStrength', label: 'Texture depth', type: 'range', min: 0, max: 200, step: 1, unit: '%', show: s => !!FINISHES[s.finish].tex},
+  {key: 'foil', label: 'Lettering', type: 'select', options: FOILS},
+  {section: 'Pages'},
+  {key: 'paperColor', label: 'Paper colour', type: 'color'},
+  {key: 'edge', label: 'Page edges', type: 'select', options: [['plain', 'Plain'], ['sprayed', 'Sprayed'], ['gilded', 'Gilded']]},
+  {key: 'edgeColor', label: 'Edge colour', type: 'color', show: s => s.edge !== 'plain'},
+  {key: 'content', label: 'Page content', type: 'select', options: [['text', 'Text'], ['blank', 'Blank'], ['image', 'Image spread']]},
+  {key: 'img_spread', label: 'Spread image', type: 'file', show: s => s.content === 'image'},
+  {key: 'endColor', label: 'Endpaper colour', type: 'color'},
+  {key: 'img_end', label: 'Endpaper image', type: 'file'},
+  {section: 'Details'},
+  {key: 'headband', label: 'Headbands', type: 'check', show: s => s.binding === 'hard'},
+  {key: 'headbandColor', label: 'Headband colour', type: 'color', show: s => s.binding === 'hard' && s.headband},
+  {key: 'ribbon', label: 'Ribbon marker', type: 'check'},
+  {key: 'ribbonColor', label: 'Ribbon colour', type: 'color', show: s => s.ribbon},
+  {key: 'ribbonLen', label: 'Ribbon tail', type: 'range', min: 10, max: 200, step: 1, unit: 'mm', show: s => s.ribbon},
+  {section: 'Light', show: s => s.style !== 'outline'},
+  {key: 'sunEl', label: 'Sun height', type: 'range', min: 2, max: 90, step: 1, unit: '°'},
+  {key: 'sunAz', label: 'Sun direction', type: 'dial'},
+  {key: 'sun', label: 'Sun strength', type: 'range', min: 0, max: 250, step: 1, unit: '%'},
+  {key: 'ambient', label: 'Ambient', type: 'range', min: 0, max: 250, step: 1, unit: '%'},
+  {key: 'softness', label: 'Shadow softness', type: 'range', min: 0, max: 100, step: 1, unit: '%'},
+  {key: 'shadow', label: 'Shadow strength', type: 'range', min: 0, max: 100, step: 1, unit: '%'},
+  {key: 'exposure', label: 'Exposure', type: 'range', min: 30, max: 250, step: 1, unit: '%'},
+  {section: 'Stage'},
+  {key: 'bg', label: 'Background', type: 'color'},
+  {section: 'Camera'},
+  {key: 'focal', label: 'Focal length', type: 'range', min: 12, max: 300, step: 1, unit: 'mm', log: true},
+  {type: 'buttons', buttons: [['Front', () => setView('front')], ['Three-quarter', () => setView('34')], ['Spine', () => setView('spine')],
+    ['Back', () => setView('back')], ['Top', () => setView('top')], ['Low', () => setView('low')]]},
+];
+
+/* ================= state ================= */
+const STORE_KEY = 'gutenberg-v1', IMG_KEY = 'gutenberg-images-v1';
+const state = {...DEFAULTS};
+const loadState = obj => { for (const k in DEFAULTS) if (obj && k in obj && typeof obj[k] === typeof DEFAULTS[k]) state[k] = obj[k]; };
+try { loadState(JSON.parse(localStorage.getItem(STORE_KEY) || 'null')); } catch {}
+// uploaded pictures: slot -> {src (data URL), name, img, id}
+const IMG = {};
+let imgSeq = 0;
+function setImage(slot, src, name, done) {
+  if (!src) { delete IMG[slot]; saveImages(); done && done(); return; }
+  const img = new Image();
+  img.onload = () => { IMG[slot] = {src, name, img, id: ++imgSeq}; saveImages(); done && done(); };
+  img.onerror = () => say('Could not read ' + name);
+  img.src = src;
+}
+function saveImages() {
+  const out = {};
+  for (const k in IMG) out[k] = {src: IMG[k].src, name: IMG[k].name};
+  try { localStorage.setItem(IMG_KEY, JSON.stringify(out)); } catch { try { localStorage.removeItem(IMG_KEY); } catch {} }
+}
+
+/* ================= UI ================= */
+const inputs = {}, sections = [];
+const ctl = $('controls');
+const mark = on => on ? '[*] ' : '[ ] ';
+let body = ctl, secKeys = [];
+for (const s of SCHEMA) {
+  if (s.section) {
+    const sec = document.createElement('section'); sec.className = 'grp';
+    const h = document.createElement('h3');
+    const t = document.createElement('span'); t.textContent = s.section;
+    const fold = document.createElement('button'); fold.type = 'button'; fold.className = 'fold'; fold.textContent = '-';
+    fold.setAttribute('aria-label', 'Collapse ' + s.section); fold.setAttribute('aria-expanded', 'true');
+    fold.onclick = () => { const c = sec.classList.toggle('closed'); fold.textContent = c ? '+' : '-';
+      fold.setAttribute('aria-expanded', String(!c)); fold.setAttribute('aria-label', (c ? 'Expand ' : 'Collapse ') + s.section); };
+    const keys = []; secKeys = keys;
+    const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'reset'; reset.textContent = '↺';
+    reset.title = 'Reset ' + s.section; reset.setAttribute('aria-label', 'Reset ' + s.section + ' to default values');
+    reset.onclick = () => { for (const k of keys) state[k] = DEFAULTS[k]; schedule(); };
+    h.append(t, reset, fold);
+    body = document.createElement('div'); body.className = 'grp-body';
+    sec.append(h, body); ctl.appendChild(sec);
+    sections.push({sec, s});
+    continue;
+  }
+  const row = document.createElement('div'); row.className = 'row';
+  const id = 'c_' + (s.key || s.id || Math.random().toString(36).slice(2));
+  let el = null, num = null;
+  const set = v => { state[s.key] = v; onChange(s.key); };
+  if (s.type === 'readout') {
+    el = document.createElement('div'); el.className = 'readout'; el.id = s.id; row.appendChild(el);
+  } else if (s.type === 'buttons') {
+    const box = document.createElement('div'); box.className = 'btns';
+    for (const [lab, fn] of s.buttons) { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.onclick = fn; box.appendChild(b); }
+    row.appendChild(box);
+  } else if (s.type === 'check') {
+    el = document.createElement('button'); el.type = 'button'; el.className = 'check'; el.id = id; el.setAttribute('role', 'switch');
+    el.onclick = () => set(!state[s.key]);
+    row.appendChild(el);
+  } else if (s.type === 'text' || s.type === 'textarea') {
+    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = s.label;
+    el = document.createElement(s.type === 'text' ? 'input' : 'textarea'); el.id = id; el.className = s.type === 'text' ? 'txt' : 'area';
+    if (s.type === 'text') el.type = 'text';
+    el.spellcheck = false;
+    el.addEventListener('input', () => set(el.value));
+    row.append(lab, el);
+  } else if (s.type === 'file') {
+    const slot = s.key.slice(4);
+    const line = document.createElement('div'); line.className = 'line';
+    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = s.label;
+    el = document.createElement('input'); el.type = 'file'; el.id = id; el.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml'; el.hidden = true;
+    const box = document.createElement('span'); box.className = 'filebox';
+    const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'filebtn'; pick.textContent = 'Choose file';
+    const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'clear'; clear.textContent = '×';
+    clear.setAttribute('aria-label', 'Remove ' + s.label);
+    pick.onclick = () => el.click();
+    clear.onclick = () => setImage(slot, null, '', () => onChange(s.key));
+    el.addEventListener('change', () => {
+      const f = el.files && el.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => setImage(slot, rd.result, f.name, () => onChange(s.key));
+      rd.readAsDataURL(f); el.value = '';
+    });
+    box.append(pick, clear); line.append(lab, box, el); row.appendChild(line);
+    s.pick = pick; s.clear = clear; s.slot = slot;
+  } else if (s.type === 'dial') {
+    // sun direction: a top view of the book and the sun's path around it; drag the sun round
+    const line = document.createElement('div'); line.className = 'line';
+    const lab = document.createElement('label'); lab.htmlFor = id + '_n'; lab.textContent = s.label;
+    const box = document.createElement('span'); box.className = 'num';
+    num = document.createElement('input'); num.type = 'text'; num.inputMode = 'decimal'; num.id = id + '_n';
+    const u = document.createElement('span'); u.className = 'unit'; u.textContent = '°';
+    box.append(num, u); line.append(lab, box);
+    const NS = 'http://www.w3.org/2000/svg', S = 150, cx = S / 2, R = 58;
+    el = document.createElementNS(NS, 'svg'); el.setAttribute('viewBox', `0 0 ${S} ${S}`); el.setAttribute('class', 'sundial'); el.id = id;
+    el.setAttribute('role', 'slider'); el.setAttribute('tabindex', '0'); el.setAttribute('aria-label', 'Sun direction');
+    el.innerHTML = `<circle cx="${cx}" cy="${cx}" r="${R}" class="path"/>
+      <rect x="${cx - 18}" y="${cx - 9}" width="36" height="18" class="subject"/>
+      <text x="${cx}" y="${S - 3}" class="tag">FRONT</text>
+      <line class="ray" x1="${cx}" y1="${cx}" x2="${cx}" y2="${cx}"/>
+      <circle class="sun" cx="${cx}" cy="${cx + R}" r="7"/>`;
+    const sun = el.querySelector('.sun'), ray = el.querySelector('.ray');
+    s.setDial = deg => {
+      const a = deg * D2R, x = cx + R * Math.sin(a), y = cx + R * Math.cos(a);
+      sun.setAttribute('cx', x); sun.setAttribute('cy', y); ray.setAttribute('x2', x); ray.setAttribute('y2', y);
+      el.setAttribute('aria-valuenow', Math.round(deg));
+      if (document.activeElement !== num) num.value = Math.round(deg);
+    };
+    const setAz = deg => set(Math.round((deg % 360 + 360) % 360));
+    const fromPointer = e => { const r = el.getBoundingClientRect(); const dx = (e.clientX - r.left) / r.width * S - cx, dy = (e.clientY - r.top) / r.height * S - cx; setAz(Math.atan2(dx, dy) / D2R); };
+    let held = false;
+    el.addEventListener('pointerdown', e => { held = true; el.setPointerCapture(e.pointerId); fromPointer(e); });
+    el.addEventListener('pointermove', e => { if (held) fromPointer(e); });
+    el.addEventListener('pointerup', () => { held = false; });
+    el.addEventListener('keydown', e => { const k = {ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5}[e.key]; if (k) { e.preventDefault(); setAz(state[s.key] + k); } });
+    num.addEventListener('change', () => { const v = parseFloat(num.value); if (!isNaN(v)) setAz(v); else s.setDial(state[s.key]); });
+    num.addEventListener('keydown', e => { if (e.key === 'Enter') num.blur(); });
+    row.append(line, el);
+  } else {
+    const line = document.createElement('div'); line.className = 'line';
+    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = s.label; line.appendChild(lab);
+    if (s.type === 'select') {
+      el = document.createElement('select');
+      for (const [v, t] of s.options) el.add(new Option(t.toUpperCase(), v));
+      line.appendChild(el);
+      el.addEventListener('change', () => set(el.value));
+    } else if (s.type === 'color') {
+      el = document.createElement('input'); el.type = 'color'; line.appendChild(el);
+      el.addEventListener('input', () => set(el.value));
+    } else {
+      const box = document.createElement('span'); box.className = 'num';
+      num = document.createElement('input'); num.type = 'text'; num.inputMode = 'decimal'; num.id = id + '_n';
+      num.setAttribute('aria-label', s.label + (s.unit ? ' (' + s.unit + ')' : ''));
+      box.appendChild(num);
+      if (s.unit) { const u = document.createElement('span'); u.className = 'unit'; u.textContent = s.unit; box.appendChild(u); }
+      line.appendChild(box);
+      el = document.createElement('input'); el.type = 'range';
+      if (s.log) {
+        const span = Math.log(s.max / s.min);
+        s.toSlider = v => Math.round(1000 * Math.log(v / s.min) / span);
+        s.fromSlider = t => Math.round(s.min * Math.exp(t / 1000 * span));
+        Object.assign(el, {min: 0, max: 1000, step: 1});
+      } else Object.assign(el, {min: s.min, max: s.max, step: s.step});
+      el.addEventListener('input', () => set(s.log ? s.fromSlider(+el.value) : parseFloat(el.value)));
+      num.addEventListener('change', () => { const v = parseFloat(num.value); if (isNaN(v)) { syncUI(); return; } set(clamp(v, s.min, s.max)); });
+      num.addEventListener('keydown', e => { if (e.key === 'Enter') num.blur(); });
+    }
+    row.appendChild(line);
+    if (s.type === 'range') row.appendChild(el);
+  }
+  if (el && el.id === '') el.id = id;
+  body.appendChild(row);
+  if (s.key) { inputs[s.key] = {el, s, row, num}; if (s.key in DEFAULTS) secKeys.push(s.key); }
+  else if (s.show) inputs[id] = {el, s, row, num};
+}
+
+// linked controls: picking a trim size or paper fills in the numbers; typing numbers switches to Custom
+function onChange(k) {
+  if (k === 'trim') { const t = TRIMS.find(t => t[0] === state.trim); if (t && t[2]) { state.width = t[2]; state.height = t[3]; } }
+  if (k === 'width' || k === 'height') { const t = TRIMS.find(t => t[2] === state.width && t[3] === state.height); state.trim = t ? t[0] : 'custom'; }
+  if (k === 'paper') { const p = PAPERS.find(p => p[0] === state.paper); if (p && p[2]) state.leaf = p[2]; }
+  if (k === 'leaf') { const p = PAPERS.find(p => p[2] === state.leaf); state.paper = p ? p[0] : 'custom'; }
+  if (k === 'font' || k === 'weight') loadFont();
+  schedule();
+}
+function syncUI() {
+  for (const k in inputs) {
+    const {el, s, num, row} = inputs[k];
+    if (s.show) row.hidden = !s.show(state);
+    if (!s.key) continue;
+    if (s.type === 'check') { el.textContent = mark(state[k]) + s.label; el.setAttribute('aria-checked', String(!!state[k])); }
+    else if (s.type === 'file') { const im = IMG[s.slot]; s.pick.textContent = im ? im.name : 'Choose file'; s.clear.hidden = !im; }
+    else if (s.type === 'dial') s.setDial(state[k]);
+    else if ((s.type === 'text' || s.type === 'textarea')) { if (document.activeElement !== el) el.value = state[k]; }
+    else if (s.type !== 'readout' && s.type !== 'buttons') el.value = s.log ? s.toSlider(state[k]) : state[k];
+    if (num && s.type === 'range' && document.activeElement !== num) num.value = +(+state[k]).toFixed(3);
+  }
+  for (const {sec, s} of sections) if (s.show) sec.hidden = !s.show(state);
+}
+
+/* ================= fonts ================= */
+let fontsV = 0;
+function loadFont() {
+  if (!document.fonts) return;
+  const f = state.font, w = state.weight;
+  Promise.all([document.fonts.load(`${w} 64px "${f}"`), document.fonts.load(`400 64px "${f}"`), document.fonts.load(`italic 400 64px "${f}"`)])
+    .then(() => { fontsV++; schedule(); }).catch(() => {});
+}
+
+/* ================= renderer & scene ================= */
+const main = document.querySelector('main');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: false}); }
+catch (e) {
+  const el = $('loading'); el.dataset.final = '1';
+  el.style.cssText += ';padding:24px;text-align:center;line-height:1.5;max-width:52ch;margin:auto';
+  el.textContent = 'This browser has 3D graphics (WebGL) turned off, so the book can’t be drawn. '
+    + 'In Chrome: Settings → System → turn on “Use graphics acceleration when available”, then relaunch Chrome. Or open this page in Safari.';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.NeutralToneMapping;   // keeps cover colours close to the design file
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
+main.prepend(renderer.domElement);
+$('loading').remove();
+const MAX_TEX = renderer.capabilities.maxTextureSize;
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 20000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.12; controls.maxPolarAngle = Math.PI * 0.5 - 0.002;
+const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048); sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.4;
+scene.add(sunLight, sunLight.target);
+// a new shadow size needs both the shadow map and its soft-shadow blur pass rebuilt
+function setShadowSize(n) {
+  const sh = sunLight.shadow; if (sh.mapSize.x === n) return;
+  sh.mapSize.set(n, n);
+  if (sh.map) { sh.map.dispose(); sh.map = null; }
+  if (sh.mapPass) { sh.mapPass.dispose(); sh.mapPass = null; }
+}
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({opacity: 0.4}));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const poseGroup = new THREE.Group(), bookGroup = new THREE.Group();
+poseGroup.add(bookGroup); scene.add(poseGroup);
+
+/* ================= textures ================= */
+const mkCanvas = (w = 4, h = 4) => Object.assign(document.createElement('canvas'), {width: w, height: h});
+function canvasTex(c, srgb = true) {
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = ANISO;
+  return t;
+}
+const coverCanvas = mkCanvas(), finCanvas = mkCanvas(), spreadCanvas = mkCanvas(), endCanvas = mkCanvas(), edgeCanvas = mkCanvas(256, 4);
+const TEX = {cover: canvasTex(coverCanvas), fin: canvasTex(finCanvas, false), spread: canvasTex(spreadCanvas), end: canvasTex(endCanvas), edge: canvasTex(edgeCanvas)};
+TEX.edge.wrapS = TEX.edge.wrapT = THREE.RepeatWrapping;
+// a canvas texture must be remade when its canvas changes size
+function refreshTex(name, canvas, w, h, srgb = true) {
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    const old = TEX[name]; TEX[name] = canvasTex(canvas, srgb);
+    TEX[name].wrapS = old.wrapS; TEX[name].wrapT = old.wrapT;
+    old.dispose();
+    for (const m of Object.values(MAT)) for (const slot of ['map', 'roughnessMap', 'metalnessMap'])
+      if (m[slot] === old) { m[slot] = TEX[name]; m.needsUpdate = true; }
+  }
+  return canvas.getContext('2d');
+}
+// page edges: one stripe per leaf, very slightly uneven
+{
+  const g = edgeCanvas.getContext('2d'), d = g.createImageData(256, 4);
+  for (let x = 0; x < 256; x++) {
+    const leaf = x % 4 === 0 ? 0.82 : 0.97 + Math.random() * 0.03;
+    for (let y = 0; y < 4; y++) { const i = (y * 256 + x) * 4; d.data[i] = d.data[i + 1] = d.data[i + 2] = leaf * 255; d.data[i + 3] = 255; }
+  }
+  g.putImageData(d, 0, 0); TEX.edge.needsUpdate = true;
+}
+// tileable normal maps for textured cover finishes
+const NORMALS = {};
+function periodicNoise(n, cells, seed) {
+  let s = seed; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const lat = Array.from({length: cells * cells}, rnd), out = new Float32Array(n * n);
+  const sm = t => t * t * (3 - 2 * t);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const fx = x / n * cells, fy = y / n * cells, ix = Math.floor(fx), iy = Math.floor(fy), tx = sm(fx - ix), ty = sm(fy - iy);
+    const L = (a, b) => lat[((b % cells + cells) % cells) * cells + ((a % cells + cells) % cells)];
+    out[y * n + x] = (L(ix, iy) * (1 - tx) + L(ix + 1, iy) * tx) * (1 - ty) + (L(ix, iy + 1) * (1 - tx) + L(ix + 1, iy + 1) * tx) * ty;
+  }
+  return out;
+}
+function normalMap(kind) {
+  if (NORMALS[kind]) return NORMALS[kind];
+  const n = 256, h = new Float32Array(n * n);
+  if (kind === 'linen' || kind === 'cloth') {
+    const f = kind === 'linen' ? 16 : 32, nz = periodicNoise(n, 32, 7), slub = periodicNoise(n, 8, 3);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const u = x / n * f, v = y / n * f, over = (Math.floor(u) + Math.floor(v)) % 2;
+      const warp = Math.sin(Math.PI * (v % 1)), weft = Math.sin(Math.PI * (u % 1));
+      h[y * n + x] = (over ? warp * 0.9 + 0.1 * weft : weft * 0.9 + 0.1 * warp) * (0.8 + 0.3 * slub[y * n + x]) + nz[y * n + x] * 0.25;
+    }
+  } else if (kind === 'leather') {
+    const a = periodicNoise(n, 16, 11), b = periodicNoise(n, 32, 5), c = periodicNoise(n, 64, 9);
+    for (let i = 0; i < n * n; i++) { const r = 1 - Math.abs(a[i] - 0.5) * 2; h[i] = Math.pow(r, 3) * 0.7 + b[i] * 0.25 + c[i] * 0.12; }
+  } else {
+    const a = periodicNoise(n, 64, 13), b = periodicNoise(n, 128, 17);
+    for (let i = 0; i < n * n; i++) h[i] = a[i] * 0.6 + b[i] * 0.4;
+  }
+  const c = mkCanvas(n, n), g = c.getContext('2d'), d = g.createImageData(n, n), k = 2.2;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const H = (xx, yy) => h[((yy + n) % n) * n + ((xx + n) % n)];
+    const dx = (H(x + 1, y) - H(x - 1, y)) * k, dy = (H(x, y + 1) - H(x, y - 1)) * k;
+    const l = Math.hypot(dx, dy, 1), i = (y * n + x) * 4;
+    d.data[i] = (-dx / l * 0.5 + 0.5) * 255; d.data[i + 1] = (dy / l * 0.5 + 0.5) * 255; d.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; d.data[i + 3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO;
+  return NORMALS[kind] = t;
+}
+
+/* ================= materials ================= */
+const MAT = {
+  cover: new THREE.MeshPhysicalMaterial({map: TEX.cover, roughnessMap: TEX.fin, metalnessMap: TEX.fin, roughness: 1, metalness: 1}),
+  endpaper: new THREE.MeshStandardMaterial({map: TEX.end, roughness: 0.85}),
+  page: new THREE.MeshStandardMaterial({roughness: 0.92}),
+  spread: new THREE.MeshStandardMaterial({map: TEX.spread, roughness: 0.9}),
+  edge: new THREE.MeshStandardMaterial({map: TEX.edge, roughness: 0.9}),
+  lining: new THREE.MeshStandardMaterial({roughness: 0.9}),
+  headband: new THREE.MeshPhysicalMaterial({roughness: 0.55, sheen: 1, sheenRoughness: 0.5}),
+  ribbon: new THREE.MeshPhysicalMaterial({roughness: 0.4, sheen: 1, sheenRoughness: 0.35, side: THREE.DoubleSide}),
+};
+// outline style: plain white bodies, lines found from a normal + depth pass
+const whiteMat = new THREE.MeshBasicMaterial({color: 0xffffff, toneMapped: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1});
+
+/* ================= geometry =================
+   Book coordinates (mm): X across the cover (spine at 0, fore edge at +X), Y through the thickness
+   (back cover underneath at Y = 0, front cover on top), Z along the height (head at -Z, tail at +Z).
+   Every part is a profile in the XY plane pushed along Z; the front half of the book turns about the spine. */
+class Builder {
+  constructor() { this.parts = {}; }
+  tri(mat, a, b, c) {
+    const p = this.parts[mat] ||= {pos: [], nrm: [], uv: []};
+    for (const v of [a, b, c]) { p.pos.push(...v.p); p.nrm.push(...v.n); p.uv.push(...v.uv); }
+  }
+  meshes() {
+    const out = [];
+    for (const [mat, p] of Object.entries(this.parts)) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(p.pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(p.nrm, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(p.uv, 2));
+      const m = new THREE.Mesh(g, MAT[mat]); m.userData.mat = mat; m.castShadow = m.receiveShadow = true;
+      out.push(m);
+    }
+    return out;
+  }
+}
+/* strips: consecutive pieces of one closed profile, each {pts, mat, u: fn(origPoint, i) | array, v0, v1}.
+   T moves profile points into place (the closed-book frame is kept for texture mapping). */
+function prism(B, strips, z0, z1, T, cap) {
+  T = T || (p => p);
+  const P = strips.map(s => s.pts.map(T));
+  const poly = [], orig = [];
+  strips.forEach((s, k) => { for (let i = 0; i < s.pts.length - 1; i++) { poly.push(P[k][i]); orig.push(s.pts[i]); } });
+  let area = 0;
+  for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; area += a[0] * b[1] - b[0] * a[1]; }
+  const sg = area >= 0 ? 1 : -1;
+  strips.forEach((s, k) => {
+    const pts = P[k], n = pts.length;
+    const us = pts.map((_, i) => typeof s.u === 'function' ? s.u(s.pts[i], i) : s.u[i]);
+    const nr = pts.map((_, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+      const tx = b[0] - a[0], ty = b[1] - a[1], l = Math.hypot(tx, ty) || 1;
+      return [sg * ty / l, -sg * tx / l, 0];
+    });
+    const v0 = s.v0 ?? 1, v1 = s.v1 ?? 0;
+    for (let i = 0; i < n - 1; i++) {
+      if (Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) < 1e-6) continue;
+      const V = (j, z, v) => ({p: [pts[j][0], pts[j][1], z], n: nr[j], uv: [us[j], v]});
+      const a = V(i, z0, v0), b = V(i + 1, z0, v0), c = V(i + 1, z1, v1), d = V(i, z1, v1);
+      if (sg > 0) { B.tri(s.mat, a, b, c); B.tri(s.mat, a, c, d); } else { B.tri(s.mat, a, c, b); B.tri(s.mat, a, d, c); }
+    }
+  });
+  if (!cap) return;
+  const pts = [], og = [];
+  poly.forEach((p, i) => { const l = pts[pts.length - 1]; if (!l || Math.hypot(p[0] - l[0], p[1] - l[1]) > 1e-5) { pts.push(p); og.push(orig[i]); } });
+  while (pts.length > 2 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-5) { pts.pop(); og.pop(); }
+  if (pts.length < 3) return;
+  const tris = THREE.ShapeUtils.triangulateShape(pts.map(p => new THREE.Vector2(p[0], p[1])), []);
+  for (const [a, b, c] of tris) {
+    const ccw = (pts[b][0] - pts[a][0]) * (pts[c][1] - pts[a][1]) - (pts[b][1] - pts[a][1]) * (pts[c][0] - pts[a][0]) > 0;
+    for (const head of [true, false]) {
+      const z = head ? z0 : z1, nz = head ? -1 : 1;
+      const order = ccw === !head ? [a, b, c] : [a, c, b];
+      B.tri(cap.mat, ...order.map(i => ({p: [pts[i][0], pts[i][1], z], n: [0, 0, nz], uv: cap.uv(og[i], head)})));
+    }
+  }
+}
+
+// all the derived sizes of the current book (mm)
+function dims(s = state) {
+  const hard = s.binding === 'hard';
+  const W = s.width, H = s.height, leaves = Math.max(1, Math.round(s.pages / 2));
+  const Tp = Math.max(0.3, leaves * s.leaf);
+  const bt = hard ? s.board : 0.3;                 // board (or paperback cover) thickness
+  const st = hard ? 1.0 : 0.3;                     // thickness of the cover across the spine
+  const oh = hard ? s.overhang : 0;
+  const j = hard ? Math.min(7, W * 0.05) : 0;      // hinge: gap between the spine and the board
+  const Wx = W + oh, Hc = H + 2 * oh, T = Tp + 2 * bt;
+  const round = hard && s.spine === 'round';
+  const b = round ? s.rounding / 100 * T * 0.22 : 0;
+  // arc length of the spine (the printed spine panel)
+  let S = 0; { let px = -st, py = 0; for (let i = 1; i <= 32; i++) { const t = i / 32, x = -st - 4 * b * t * (1 - t), y = T * t; S += Math.hypot(x - px, y - py); px = x; py = y; } }
+  const Pw = Wx + st, U = 2 * Pw + S;              // printed panel width (fore edge to spine edge) and full spread width
+  return {hard, W, H, leaves, Tp, bt, st, oh, j, Wx, Hc, T, round, b, S, Pw, U};
+}
+
+let G = dims();
+function buildBook() {
+  const s = state, g = G = dims();
+  const {hard, W, H, Tp, bt, st, oh, j, Wx, Hc, T, b, S, Pw, U} = g;
+  for (const o of [...bookGroup.children]) { o.geometry && o.geometry.dispose(); bookGroup.remove(o); }
+  const B = new Builder();
+  const a = s.openAngle * D2R, ca = Math.cos(a), sa = Math.sin(a), fa = (1 - ca) / 2;
+  const hL = Tp * s.openAt / 100, hR = Tp - hL, yc = bt + hL, off = (hR - hL) * fa;
+  const TF = ([x, y]) => { const dy = y - yc; return [x * ca - dy * sa, x * sa + dy * ca + yc + off]; };
+  const bE = b * (1 + ca) / 2;                                    // the spine flattens as the book opens
+  const xsp = y => -bE * 4 * (y / T) * (1 - y / T);               // spine side of the page block
+  const uB = x => (Pw - (x + st)) / U, uF = x => (Pw + S + x + st) / U;   // cover spread: back | spine | front
+  const EPS = 0.0015;
+  const edgeCap = (fn, head) => [fn, head ? 1 - EPS : EPS];
+  // hinge groove pressed into the board, near the spine
+  const gr = hard && s.joint ? {x: j + 4.5, w: 4, d: Math.min(0.9, bt * 0.35)} : null;
+  const face = (y, dir, x0, x1) => {
+    const pts = [[x0, y]];
+    if (gr) { const xs = x0 < x1 ? 1 : -1; for (let k = 0; k <= 10; k++) { const kk = xs > 0 ? k : 10 - k, x = gr.x - gr.w / 2 + gr.w * kk / 10;
+      pts.push([x, y + dir * gr.d * 0.5 * (1 - Math.cos(2 * Math.PI * kk / 10))]); } }
+    pts.push([x1, y]);
+    return pts;
+  };
+  const z0 = -Hc / 2, z1 = Hc / 2;
+  // back board
+  prism(B, [
+    {pts: face(0, 1, j, Wx), mat: 'cover', u: p => uB(p[0])},
+    {pts: [[Wx, 0], [Wx, bt]], mat: 'cover', u: () => EPS},
+    {pts: [[Wx, bt], [j, bt]], mat: 'endpaper', u: p => (p[0] - j) / (Wx - j)},
+    {pts: [[j, bt], [j, 0]], mat: 'cover', u: () => uB(j)},
+  ], z0, z1, null, {mat: 'cover', uv: (p, head) => edgeCap(uB(p[0]), head)});
+  // front board
+  prism(B, [
+    {pts: [[j, T - bt], [Wx, T - bt]], mat: 'endpaper', u: p => 1 - (p[0] - j) / (Wx - j)},
+    {pts: [[Wx, T - bt], [Wx, T]], mat: 'cover', u: () => 1 - EPS},
+    {pts: face(T, -1, Wx, j), mat: 'cover', u: p => uF(p[0])},
+    {pts: [[j, T], [j, T - bt]], mat: 'cover', u: () => uF(j)},
+  ], z0, z1, TF, {mat: 'cover', uv: (p, head) => edgeCap(uF(p[0]), head)});
+  // spine: the cover runs from the back board, round the spine, to the front board
+  {
+    const A = [j, 0], A1 = [-st, 0], Bq = TF([j, T]), B1 = TF([-st, T]);
+    const dx = B1[0] - A1[0], dy = B1[1] - A1[1], C = [(A1[0] + B1[0]) / 2 - dy / (Math.hypot(dx, dy) || 1) * 2 * bE, (A1[1] + B1[1]) / 2 + dx / (Math.hypot(dx, dy) || 1) * 2 * bE];
+    const outer = [], us = [];
+    for (let i = 0; i <= 4; i++) { const t = i / 4; outer.push([A[0] + (A1[0] - A[0]) * t, 0]); us.push(uB(j + (-st - j) * t)); }
+    for (let i = 1; i <= 24; i++) { const t = i / 24, m = 1 - t; outer.push([m * m * A1[0] + 2 * m * t * C[0] + t * t * B1[0], m * m * A1[1] + 2 * m * t * C[1] + t * t * B1[1]]); us.push((Pw + S * t) / U); }
+    for (let i = 1; i <= 4; i++) { const t = i / 4; outer.push([B1[0] + (Bq[0] - B1[0]) * t, B1[1] + (Bq[1] - B1[1]) * t]); us.push(uF(-st + (j + st) * t)); }
+    // inner face: offset into the book by the cover thickness
+    const n = outer.length, inner = outer.map((p, i) => {
+      const q0 = outer[Math.max(0, i - 1)], q1 = outer[Math.min(n - 1, i + 1)];
+      const tx = q1[0] - q0[0], ty = q1[1] - q0[1], l = Math.hypot(tx, ty) || 1;
+      return [p[0] + ty / l * st, Math.max(0, p[1] - tx / l * st)];
+    });
+    for (const p of outer) p[1] = Math.max(0, p[1]);
+    const innerRev = [...inner].reverse(), usRev = [...us].reverse();
+    prism(B, [
+      {pts: outer, mat: 'cover', u: us},
+      {pts: [outer[n - 1], inner[n - 1]], mat: 'cover', u: [us[n - 1], us[n - 1]]},
+      {pts: innerRev, mat: 'lining', u: usRev},
+      {pts: [inner[0], outer[0]], mat: 'cover', u: [us[0], us[0]]},
+    ], z0, z1, null, {mat: 'cover', uv: (p, head) => [nearestU(outer, us, p), head ? 1 - EPS : EPS]});
+  }
+  // page blocks: one half stays on the back board, the other turns with the front board
+  const L = s.curl / 100 * W * 0.07 * fa;
+  const bump = u => (1 - Math.exp(-u / 0.045)) * Math.pow(1 - u, 1.6);
+  const nTop = 36, xs = Array.from({length: nTop + 1}, (_, k) => W * Math.pow(k / nTop, 1.8));
+  const spinePts = (y0, y1) => Array.from({length: 9}, (_, k) => { const y = y0 + (y1 - y0) * k / 8; return [xsp(y), y]; });
+  const leafReps = h => h / s.leaf / 64;
+  const hz0 = -H / 2, hz1 = H / 2;
+  const stack = (y0, y1, front) => {
+    const h = y1 - y0; if (h < 0.02 && L < 0.05) return;
+    const reps = leafReps(Math.max(h, s.leaf));
+    const ev = p => reps * (p[1] - y0) / Math.max(h, 1e-3);
+    const curve = xs.map(x => [x, front ? y0 - L * bump(x / W) : y1 + L * bump(x / W)]);
+    if (!front) {
+      const top = [...curve].reverse(); top[top.length - 1] = [xsp(y1), y1];
+      prism(B, [
+        {pts: [[xsp(y0), y0], [W, y0]], mat: 'page', u: p => p[0] / W},
+        {pts: [[W, y0], [W, y1]], mat: 'edge', u: ev, v0: 0, v1: 1},
+        {pts: top, mat: 'spread', u: p => 0.5 + 0.5 * Math.max(0, p[0]) / W},
+        {pts: spinePts(y1, y0), mat: 'page', u: p => 0},
+      ], hz0, hz1, null, {mat: 'edge', uv: p => [ev(p), p[0] / W]});
+    } else {
+      const bot = curve.slice(); bot[0] = [xsp(y0), y0];
+      prism(B, [
+        {pts: bot, mat: 'spread', u: p => 0.5 - 0.5 * Math.max(0, p[0]) / W},
+        {pts: [[W, y0], [W, y1]], mat: 'edge', u: ev, v0: 0, v1: 1},
+        {pts: [[W, y1], [xsp(y1), y1]], mat: 'page', u: p => p[0] / W},
+        {pts: spinePts(y1, y0), mat: 'page', u: p => 0},
+      ], hz0, hz1, TF, {mat: 'edge', uv: p => [ev(p), p[0] / W]});
+    }
+  };
+  stack(bt, yc, false);
+  stack(yc, T - bt, true);
+  const meshes = B.meshes();
+  // headbands: a small rolled band at head and tail of each half of the block
+  if (hard && s.headband) {
+    const r = Math.min(1.2, Math.max(0.5, oh * 0.35));
+    for (const [y0, y1, tf] of [[bt, yc, p => p], [yc, T - bt, TF]]) {
+      if (y1 - y0 < 0.6) continue;
+      for (const z of [hz0 + r * 0.3, hz1 - r * 0.3]) {
+        const pts = spinePts(y0 + 0.15, y1 - 0.15).map(p => { const q = tf([p[0] + r * 0.7, p[1]]); return new THREE.Vector3(q[0], q[1], z); });
+        const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, r, 8, false);
+        const m = new THREE.Mesh(geo, MAT.headband); m.castShadow = m.receiveShadow = true; meshes.push(m);
+      }
+    }
+  }
+  // ribbon marker: leaves the block between the open pages and falls to the floor
+  if (s.ribbon) {
+    const rw = 6, xr = Math.min(W * 0.35, 40), ys = yc + (L ? L * bump(xr / W) : 0) + 0.12;
+    const standing = s.pose === 'standing', P = [];
+    if (!standing) {
+      const drop = ys, run = Math.max(2, s.ribbonLen - drop);
+      P.push([xr, ys, hz1 - 25], [xr, ys, hz1], [xr, ys * 0.7, z1 + 2 + drop * 0.25], [xr, ys * 0.2, z1 + 3 + drop * 0.8], [xr, 0.15, z1 + 4 + drop], [xr, 0.15, z1 + 4 + drop + run]);
+    } else {
+      const run = Math.max(2, s.ribbonLen - oh);
+      P.push([xr, ys, hz1 - 25], [xr, ys, hz1], [xr, ys + 1.5, z1 - 0.15 - oh * 0.2], [xr, ys + 4, z1 + 0.15], [xr, ys + 4 + run * 0.5, z1 + 0.15], [xr, ys + 4 + run, z1 + 0.15]);
+    }
+    const curve = new THREE.CatmullRomCurve3(P.map(p => new THREE.Vector3(...p)), false, 'centripetal');
+    const N = 80, pos = [], nrm = [], uv = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = curve.getPointAt(t), tg = curve.getTangentAt(t), nn = new THREE.Vector3(1, 0, 0).cross(tg).normalize();
+      for (const sgn of [-1, 1]) { pos.push(p.x + sgn * rw / 2, p.y, p.z); nrm.push(nn.x, nn.y, nn.z); uv.push((sgn + 1) / 2, t); }
+      if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx);
+    const m = new THREE.Mesh(geo, MAT.ribbon); m.castShadow = m.receiveShadow = true; meshes.push(m);
+  }
+  for (const m of meshes) bookGroup.add(m);
+  // pose: standing on its tail facing the camera, or lying on its back cover; then put it on the floor
+  poseGroup.rotation.set(s.pose === 'standing' ? Math.PI / 2 : 0, 0, 0);
+  poseGroup.position.set(0, 0, 0); poseGroup.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(bookGroup);
+  const c = box.getCenter(new THREE.Vector3());
+  poseGroup.position.set(-c.x, -box.min.y, -c.z); poseGroup.updateMatrixWorld(true);
+  applyOutlineMode();
+}
+function nearestU(pts, us, p) {
+  let best = 0, bd = Infinity;
+  pts.forEach((q, i) => { const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2; if (d < bd) { bd = d; best = i; } });
+  return us[best];
+}
+
+/* ================= artwork ================= */
+function fitImage(ctx, img, x, y, w, h) {   // cover-fit an image into a rectangle (mm)
+  const ir = img.naturalWidth / img.naturalHeight, r = w / h;
+  let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+  if (ir > r) { sw = sh * r; sx = (img.naturalWidth - sw) / 2; } else { sh = sw / r; sy = (img.naturalHeight - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+function wrapLines(ctx, text, maxW) {
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    if (!para.trim()) { out.push(''); continue; }
+    let line = '';
+    for (const w of para.split(/\s+/)) {
+      const t = line ? line + ' ' + w : w;
+      if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  return out;
+}
+const fontStr = (w, size, family, italic) => `${italic ? 'italic ' : ''}${w} ${size}px "${family}", Georgia, serif`;
+function seeded(str) { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) / 4294967296); }
+
+function drawCover(ppm) {
+  const s = state, g = G, {Pw, S, U, Hc, st, j, Wx, oh, W, H} = g;
+  const ctx = refreshTex('cover', coverCanvas, U * ppm, Hc * ppm);
+  const fin = refreshTex('fin', finCanvas, U * ppm, Hc * ppm, false);
+  const sx = coverCanvas.width / U, sy = coverCanvas.height / Hc;
+  for (const c of [ctx, fin]) c.setTransform(sx, 0, 0, sy, 0, 0);
+  // base colours / pictures
+  ctx.fillStyle = s.backColor; ctx.fillRect(0, 0, Pw + 0.5, Hc);
+  ctx.fillStyle = s.frontColor; ctx.fillRect(Pw + S - 0.5, 0, Pw + 0.5, Hc);
+  ctx.fillStyle = s.spineColor; ctx.fillRect(Pw, 0, S, Hc);
+  if (s.artMode === 'wrap') {
+    const im = IMG.wrap?.img;
+    if (im) {   // the file is the full spread plus bleed on every side
+      const bl = s.bleed, fw = U + 2 * bl, fh = Hc + 2 * bl;
+      const kx = im.naturalWidth / fw, ky = im.naturalHeight / fh;
+      ctx.drawImage(im, bl * kx, bl * ky, U * kx, Hc * ky, 0, 0, U, Hc);
+    }
+  } else {
+    const hinge = st + j;
+    if (IMG.back) fitImage(ctx, IMG.back.img, 0, 0, Pw - hinge, Hc);
+    if (IMG.front) fitImage(ctx, IMG.front.img, Pw + S + hinge, 0, Pw - hinge, Hc);
+    if (IMG.spine) fitImage(ctx, IMG.spine.img, Pw, 0, S, Hc);
+  }
+  // finish map: green = roughness, blue = metalness
+  const F = FINISHES[s.finish];
+  fin.fillStyle = `rgb(0,${Math.round(F.rough * 255)},0)`; fin.fillRect(0, 0, U, Hc);
+  const foil = s.foil, foilFin = foil === 'spot' ? 'rgb(0,18,0)' : foil === 'ink' ? null : 'rgb(0,60,255)';
+  const ink = FOIL_COL[foil] || s.textColor;
+  // lettering, drawn the same way into both canvases
+  const front0 = Pw + S + st + j, frontW = Wx - j, cx = s.align === 'center' ? front0 + frontW / 2 : front0 + frontW * 0.1;
+  const tw = frontW * 0.8, track = s.tracking / 1000;
+  const ttl = s.caps ? s.title.toUpperCase() : s.title;
+  const tSize = W * 0.105 * s.titleSize / 100;
+  const letter = (c, fill) => {
+    c.textAlign = s.align === 'center' ? 'center' : 'left'; c.textBaseline = 'alphabetic'; c.fillStyle = fill;
+    // title
+    c.font = fontStr(s.weight, tSize, s.font); try { c.letterSpacing = (tSize * track) + 'px'; } catch {}
+    const lines = wrapLines(c, ttl, tw);
+    let y = oh + H * s.titlePos / 100 + tSize * 0.8;
+    for (const l of lines) { c.fillText(l, cx, y); y += tSize * 1.08; }
+    if (s.subtitle) {
+      const ss = tSize * 0.38; c.font = fontStr(400, ss, s.font, true); try { c.letterSpacing = '0px'; } catch {}
+      y += ss * 0.6;
+      for (const l of wrapLines(c, s.subtitle, tw)) { c.fillText(l, cx, y); y += ss * 1.25; }
+    }
+    if (s.author) {
+      const as = tSize * 0.34; c.font = fontStr(s.weight, as, s.font); try { c.letterSpacing = (as * 0.12) + 'px'; } catch {}
+      c.fillText(s.author.toUpperCase(), cx, oh + H * 0.9);
+    }
+    // spine, reading top to bottom
+    if (s.spineText && S > 3.5) {
+      c.save(); c.translate(Pw + S / 2, Hc / 2); c.rotate(Math.PI / 2);
+      const sp = Math.min(S * 0.42, W * 0.06), room = Hc - 2 * (oh + 14);
+      c.textBaseline = 'middle';
+      c.font = fontStr(s.weight, sp, s.font); try { c.letterSpacing = (sp * track) + 'px'; } catch {}
+      c.textAlign = 'left';
+      const tl = c.measureText(ttl).width;
+      c.fillText(ttl, -room / 2, 0, room * 0.62);
+      c.font = fontStr(400, sp * 0.72, s.font); try { c.letterSpacing = (sp * 0.06) + 'px'; } catch {}
+      c.textAlign = 'right';
+      if (s.author) c.fillText(s.author.toUpperCase(), room / 2, 0, Math.max(10, room - Math.min(tl, room * 0.62) - 8));
+      c.restore();
+    }
+    try { c.letterSpacing = '0px'; } catch {}
+  };
+  letter(ctx, ink);
+  if (foilFin) letter(fin, foilFin);
+  // back cover: blurb and barcode (always printed)
+  const back1 = Pw - st - j;
+  if (s.blurb) {
+    const bs = Math.max(2.2, W * 0.03); ctx.font = fontStr(400, bs, s.font); ctx.fillStyle = s.textColor; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    let y = oh + H * 0.14;
+    for (const l of wrapLines(ctx, s.blurb, back1 * 0.74)) { ctx.fillText(l, back1 * 0.13, y); y += bs * 1.45; }
+  }
+  if (s.barcode) {
+    const bw = Math.min(38, W * 0.3), bh = bw * 0.6, x = back1 - bw - Math.max(10, W * 0.07), y = oh + H - bh - Math.max(10, H * 0.05);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, bw, bh);
+    const r = seeded(s.title + s.author); ctx.fillStyle = '#111111';
+    const bx0 = x + bw * 0.08, bww = bw * 0.84, n = 95, m = bww / n;
+    for (let i = 0; i < n; i++) { const guard = i < 3 || i > 91 || (i > 45 && i < 50); if (guard ? i % 2 === 0 : r() > 0.5) ctx.fillRect(bx0 + i * m, y + bh * 0.08, m * 1.02, bh * (guard ? 0.76 : 0.68)); }
+    ctx.font = fontStr(400, bh * 0.13, 'JetBrains Mono'); ctx.textAlign = 'center';
+    const digits = '978' + Array.from({length: 10}, () => Math.floor(r() * 10)).join('');
+    ctx.fillText(digits.replace(/^(\d{3})(\d)(\d{6})(\d{3})$/, '$1 $2 $3 $4'), x + bw / 2, y + bh * 0.95);
+  }
+  TEX.cover.needsUpdate = true; TEX.fin.needsUpdate = true;
+}
+
+function drawSpread(ppm) {
+  const s = state, {W, H} = G;
+  const ctx = refreshTex('spread', spreadCanvas, 2 * W * ppm, H * ppm);
+  ctx.setTransform(spreadCanvas.width / (2 * W), 0, 0, spreadCanvas.height / H, 0, 0);
+  ctx.fillStyle = s.paperColor; ctx.fillRect(0, 0, 2 * W, H);
+  if (s.content === 'image' && IMG.spread) fitImage(ctx, IMG.spread.img, 0, 0, 2 * W, H);
+  else if (s.content === 'text') {
+    const r = seeded(s.title + W + H), lh = Math.max(1.6, H * 0.0185), mt = H * 0.09, mb = H * 0.11, mi = W * 0.1, mo = W * 0.13;
+    ctx.fillStyle = 'rgba(40,36,30,0.55)';
+    for (const side of [0, 1]) {
+      const x0 = side ? W + mi : mo, x1 = side ? 2 * W - mo : W - mi, w = x1 - x0;
+      let y = mt, para = 0;
+      if (side) { ctx.fillRect(x0 + w * 0.3, y, w * 0.4, lh * 0.75); y += lh * 3.5; }
+      while (y < H - mb) {
+        const last = para++ > 3 + r() * 8;
+        const ind = para === 1 ? w * 0.05 : 0, len = last ? w * (0.2 + r() * 0.6) : w;
+        for (let x = x0 + ind; x < x0 + ind + len - 1;) { const ww = Math.min(1 + r() * 4.5, x0 + ind + len - x); ctx.fillRect(x, y, ww, lh * 0.42); x += ww + lh * 0.3; }
+        y += lh; if (last) { para = 0; y += lh * 0.15; }
+      }
+      ctx.font = fontStr(400, lh * 0.7, s.font); ctx.textAlign = 'center';
+      ctx.fillText(String(side ? 25 : 24), side ? W + W / 2 : W / 2, H - mb * 0.45);
+    }
+  }
+  // gentle shading into the gutter
+  const gr = ctx.createLinearGradient(W - W * 0.08, 0, W + W * 0.08, 0);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(60,45,30,0.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gr; ctx.fillRect(W * 0.9, 0, W * 0.2, H);
+  TEX.spread.needsUpdate = true;
+}
+function drawEndpaper(ppm) {
+  const s = state, {Wx, Hc, j} = G, w = Wx - j;
+  const ctx = refreshTex('end', endCanvas, w * ppm, Hc * ppm);
+  ctx.setTransform(endCanvas.width / w, 0, 0, endCanvas.height / Hc, 0, 0);
+  ctx.fillStyle = s.binding === 'hard' ? s.endColor : s.paperColor; ctx.fillRect(0, 0, w, Hc);
+  if (IMG.end) fitImage(ctx, IMG.end.img, 0, 0, w, Hc);
+  TEX.end.needsUpdate = true;
+}
+
+/* ================= look ================= */
+let texPPM = 10;   // texture detail (pixels per mm); raised for exports
+const sigs = {};
+const changed = (name, v) => { const k = JSON.stringify(v); if (sigs[name] === k) return false; sigs[name] = k; return true; };
+function applyLook() {
+  const s = state, F = FINISHES[s.finish], ppm = Math.min(texPPM, MAX_TEX / G.U, MAX_TEX / G.Hc);
+  const img = k => IMG[k]?.id || 0;
+  if (changed('cover', [G, ppm, s.artMode, s.bleed, s.frontColor, s.spineColor, s.backColor, s.title, s.subtitle, s.author, s.font, s.weight, s.textColor,
+    s.titleSize, s.titlePos, s.tracking, s.caps, s.align, s.spineText, s.blurb, s.barcode, s.finish, s.foil, img('wrap'), img('front'), img('back'), img('spine'), fontsV]))
+    drawCover(ppm);
+  if (changed('spread', [G.W, G.H, ppm, s.content, s.paperColor, s.font, s.title, img('spread'), fontsV])) drawSpread(Math.min(ppm, MAX_TEX / (2 * G.W)));
+  if (changed('end', [G.Wx, G.Hc, G.j, ppm, s.binding, s.endColor, s.paperColor, img('end')])) drawEndpaper(Math.min(ppm, 6));
+  const cm = MAT.cover;
+  cm.clearcoat = F.coat || 0; cm.clearcoatRoughness = F.coatRough ?? 0.1;
+  cm.sheen = F.sheen || 0; cm.sheenRoughness = 0.6; cm.sheenColor.set(0xffffff);
+  const nm = F.tex ? normalMap(F.tex) : null;
+  if (cm.normalMap !== nm) { cm.normalMap = nm; cm.needsUpdate = true; }
+  if (nm) { nm.repeat.set(G.U / F.tile, G.Hc / F.tile); const k = F.strength * s.texStrength / 100; cm.normalScale.set(k, k); }
+  MAT.page.color.set(s.paperColor); MAT.lining.color.set(s.paperColor); MAT.spread.color.set(0xffffff);
+  const e = MAT.edge;
+  e.color.set(s.edge === 'plain' ? s.paperColor : s.edgeColor);
+  e.metalness = s.edge === 'gilded' ? 1 : 0; e.roughness = s.edge === 'gilded' ? 0.28 : 0.9;
+  MAT.headband.color.set(s.headbandColor); MAT.ribbon.color.set(s.ribbonColor);
+  for (const m of Object.values(MAT)) m.envMapIntensity = 1;
+  scene.environmentIntensity = s.ambient / 100 * 0.6;
+  sunLight.intensity = 2.6 * s.sun / 100;
+  sunLight.shadow.radius = 1 + s.softness / 100 * 24; sunLight.shadow.blurSamples = 8 + Math.round(s.softness / 100 * 20);
+  floor.material.opacity = s.shadow / 100 * 0.85;
+  renderer.toneMappingExposure = s.exposure / 100;
+  scene.background = new THREE.Color(s.bg);
+  main.style.background = s.bg;
+  const bgc = new THREE.Color(s.bg), light = bgc.r * 0.3 + bgc.g * 0.59 + bgc.b * 0.11 > 0.5;
+  main.style.color = light ? '#111' : '#f4f4f4';
+  main.style.setProperty('--stage-muted', light ? 'rgba(17,17,17,.58)' : 'rgba(244,244,244,.6)');
+  bmCanvas.hidden = s.style !== 'bitmap';
+  applyOutlineMode();
+}
+function applyOutlineMode() { floor.visible = state.style !== 'outline'; }
+
+/* ================= light & framing ================= */
+const _dir = new THREE.Vector3();
+function placeSun() {
+  const box = new THREE.Box3().setFromObject(bookGroup), c = box.getCenter(new THREE.Vector3()), r = box.getBoundingSphere(new THREE.Sphere()).radius;
+  const el = state.sunEl * D2R, az = state.sunAz * D2R;
+  _dir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  sunLight.position.copy(c).addScaledVector(_dir, r * 4); sunLight.target.position.copy(c); sunLight.target.updateMatrixWorld();
+  const sc = sunLight.shadow.camera, ext = r * 1.6 + 60;
+  Object.assign(sc, {left: -ext, right: ext, top: ext, bottom: -ext, near: r * 0.5, far: r * 8 + 400});
+  sc.updateProjectionMatrix();
+  floor.scale.setScalar(r * 40); floor.position.set(c.x, 0, c.z);
+}
+const VIEWS = {   // azimuth (0 = in front, + to the right) and elevation, per pose
+  standing: {front: [0, 4], '34': [-34, 12], spine: [-75, 8], back: [180, 8], top: [-20, 62], low: [-28, 2]},
+  lying:    {front: [0, 38], '34': [-28, 32], spine: [-70, 22], back: [180, 30], top: [0, 89], low: [-30, 10]},
+};
+function frameDistance(aspect, margin = 1.12) {
+  // move back until every corner of the book's box is inside the frame
+  const box = new THREE.Box3().setFromObject(bookGroup), pts = [];
+  for (let i = 0; i < 8; i++) pts.push(new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
+  const c = box.getCenter(new THREE.Vector3()), dir = camera.position.clone().sub(controls.target).normalize();
+  const cam = camera.clone(); cam.aspect = aspect; cam.updateProjectionMatrix();
+  let dist = box.getBoundingSphere(new THREE.Sphere()).radius / Math.tan(cam.fov * D2R / 2);
+  for (let it = 0; it < 6; it++) {
+    cam.position.copy(c).addScaledVector(dir, dist); cam.up.set(0, 1, 0); cam.lookAt(c); cam.updateMatrixWorld();
+    let e = 0; for (const p of pts) { const q = p.clone().project(cam); if (q.z > 1) { e = 2; break; } e = Math.max(e, Math.abs(q.x), Math.abs(q.y)); }
+    dist *= 1 + (e * margin - 1) * 0.9;
+  }
+  return {c, dir, dist};
+}
+function fitView() {
+  updateCam();
+  const {c, dir, dist} = frameDistance(camera.aspect);
+  controls.target.copy(c); camera.position.copy(c).addScaledVector(dir, dist);
+  camera.near = Math.max(1, dist / 100); camera.far = dist * 50; camera.updateProjectionMatrix(); controls.update();
+}
+function setView(name) {
+  const [az, el] = VIEWS[state.pose][name], c = new THREE.Box3().setFromObject(bookGroup).getCenter(new THREE.Vector3());
+  controls.target.copy(c);
+  camera.position.copy(c).add(new THREE.Vector3(Math.sin(az * D2R) * Math.cos(el * D2R), Math.sin(el * D2R), Math.cos(az * D2R) * Math.cos(el * D2R)).multiplyScalar(500));
+  fitView();
+}
+function updateCam() { camera.aspect = stageW / stageH; camera.setFocalLength(state.focal); camera.updateProjectionMatrix(); }
+
+/* ================= styles: rendering, bitmap, outline ================= */
+const nrmRT = new THREE.WebGLRenderTarget(1, 1, {type: THREE.HalfFloatType, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter});
+const nrmMat = new THREE.ShaderMaterial({side: THREE.DoubleSide,
+  vertexShader: `varying vec3 vP; varying vec3 vN; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vP = mv.xyz; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying vec3 vP; varying vec3 vN; void main(){ vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; gl_FragColor = vec4(n, -vP.z); }`});
+const edgeMat = new THREE.ShaderMaterial({transparent: true, depthTest: false, depthWrite: false,
+  uniforms: {tN: {value: nrmRT.texture}, uTexel: {value: new THREE.Vector2(1, 1)}, uWide: {value: 1}, uGap: {value: 3}},
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+  fragmentShader: `uniform sampler2D tN; uniform vec2 uTexel; uniform float uWide; uniform float uGap; varying vec2 vUv;
+    float edge(vec4 c, vec4 o){
+      bool ci = c.w > 0.0, oi = o.w > 0.0;
+      if (ci != oi) return ci ? 1.0 : 0.0;                   // silhouette
+      if (!ci) return 0.0;
+      if (o.w - c.w > max(uGap, c.w * 0.012)) return 1.0;    // in front of a part further back
+      return dot(c.xyz, o.xyz) < 0.93 && c.w <= o.w + 0.001 ? 1.0 : 0.0;   // crease
+    }
+    float around(vec4 c, float k){
+      vec2 dx = vec2(uTexel.x * k, 0.0), dy = vec2(0.0, uTexel.y * k);
+      return max(max(edge(c, texture2D(tN, vUv + dx)), edge(c, texture2D(tN, vUv - dx))), max(edge(c, texture2D(tN, vUv + dy)), edge(c, texture2D(tN, vUv - dy))));
+    }
+    void main(){ vec4 c = texture2D(tN, vUv); float e = max(around(c, 1.0), around(c, uWide)); if (e < 0.5) discard; gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); }`});
+const edgeScene = new THREE.Scene(), edgeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+{ const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), edgeMat); q.frustumCulled = false; edgeScene.add(q); }
+
+const bmCanvas = $('bitmap'), bmCtx = bmCanvas.getContext('2d', {willReadFrequently: true});
+const smallCanvas = mkCanvas(), smallCtx = smallCanvas.getContext('2d', {willReadFrequently: true});
+let bmDirty = true, EXPORT = null;
+const KERNELS = {
+  jjn: {div: 48, k: [[1,0,7],[2,0,5],[-2,1,3],[-1,1,5],[0,1,7],[1,1,5],[2,1,3],[-2,2,1],[-1,2,3],[0,2,5],[1,2,3],[2,2,1]]},
+  stucki: {div: 42, k: [[1,0,8],[2,0,4],[-2,1,2],[-1,1,4],[0,1,8],[1,1,4],[2,1,2],[-2,2,1],[-1,2,2],[0,2,4],[1,2,2],[2,2,1]]},
+  atkinson: {div: 8, k: [[1,0,1],[2,0,1],[-1,1,1],[0,1,1],[1,1,1],[0,2,1]]},
+};
+const BAYER = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
+function ditherFrame() {
+  // the rendered book turned into 1-bit black and white; outside the book stays the stage colour
+  if (!bmDirty && !EXPORT) return;
+  bmDirty = false;
+  const out = EXPORT ? EXPORT.canvas : bmCanvas, octx = out.getContext('2d');
+  const W = EXPORT ? EXPORT.w : stageW, H = EXPORT ? EXPORT.h : stageH;
+  const sc = state.bmScale * (EXPORT ? EXPORT.scale : 1), w = Math.max(1, Math.round(W / sc)), h = Math.max(1, Math.round(H / sc));
+  smallCanvas.width = w; smallCanvas.height = h;
+  smallCtx.clearRect(0, 0, w, h); smallCtx.drawImage(renderer.domElement, 0, 0, w, h);
+  const img = smallCtx.getImageData(0, 0, w, h), d = img.data, g = new Float32Array(w * h), inside = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) { inside[i] = d[i * 4 + 3] >= 128 ? 1 : 0; g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]; }
+  const thr = state.bmThreshold / 100 * 255;
+  if (state.bmMethod === 'bayer') {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (inside[i]) g[i] = g[i] + (BAYER[(y % 8) * 8 + x % 8] / 64 - 0.5) * 255 < thr ? 0 : 255; }
+  } else {
+    const K = KERNELS[state.bmMethod], amt = state.bmAmount / 100, taps = K.k.map(([dx, dy, wt]) => [dx, dy, wt / K.div * amt]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (!inside[i]) continue;
+      const v = g[i], o = v < thr ? 0 : 255, err = v - o; g[i] = o;
+      if (!err || !amt) continue;
+      for (const [dx, dy, f] of taps) { const xx = x + dx, yy = y + dy; if (xx >= 0 && xx < w && yy < h && inside[yy * w + xx]) g[yy * w + xx] += err * f; }
+    }
+  }
+  const hex = parseInt(state.bg.slice(1), 16), br = hex >> 16 & 255, bgG = hex >> 8 & 255, bb = hex & 255, transparent = EXPORT && EXPORT.transparent;
+  for (let i = 0; i < w * h; i++) {
+    if (inside[i]) { d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = g[i]; d[i * 4 + 3] = 255; }
+    else { d[i * 4] = br; d[i * 4 + 1] = bgG; d[i * 4 + 2] = bb; d[i * 4 + 3] = transparent ? 0 : 255; }
+  }
+  smallCtx.putImageData(img, 0, 0);
+  if (out.width !== W || out.height !== H) { out.width = W; out.height = H; }
+  octx.imageSmoothingEnabled = false; octx.clearRect(0, 0, W, H); octx.drawImage(smallCanvas, 0, 0, W, H);
+}
+const _clear = new THREE.Color();
+function renderFrame(transparent = false) {
+  const bg = scene.background;
+  if (transparent) scene.background = null;
+  if (state.style === 'outline') {
+    renderer.getClearColor(_clear); const ca = renderer.getClearAlpha();
+    scene.background = null; floor.visible = false; scene.overrideMaterial = nrmMat;
+    renderer.setRenderTarget(nrmRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera);
+    renderer.setRenderTarget(null); renderer.setClearColor(_clear, ca);
+    scene.background = transparent ? null : bg; scene.overrideMaterial = whiteMat;
+    renderer.render(scene, camera);
+    scene.overrideMaterial = null;
+    renderer.autoClear = false; renderer.render(edgeScene, edgeCam); renderer.autoClear = true;
+  } else if (state.style === 'bitmap') {
+    renderer.getClearColor(_clear); const ca = renderer.getClearAlpha();
+    scene.background = null; floor.visible = false; renderer.setClearColor(0x000000, 0);
+    renderer.render(scene, camera);
+    renderer.setClearColor(_clear, ca); floor.visible = true;
+    ditherFrame();
+  } else renderer.render(scene, camera);
+  scene.background = bg;
+}
+
+/* ================= stage ================= */
+let stageW = 1, stageH = 1;
+const LINE_PX = 1.5;
+function setRenderSize(w, h, pr) {
+  renderer.setPixelRatio(pr); renderer.setSize(w, h, false);
+  const db = renderer.getDrawingBufferSize(new THREE.Vector2());
+  nrmRT.setSize(db.x, db.y);
+  edgeMat.uniforms.uTexel.value.set(1 / db.x, 1 / db.y);
+  edgeMat.uniforms.uWide.value = Math.max(1, Math.round(LINE_PX * pr / 1.5));
+}
+function resize() {
+  stageW = Math.max(1, main.clientWidth); stageH = Math.max(1, main.clientHeight);
+  setRenderSize(stageW, stageH, Math.min(devicePixelRatio, 2));
+  updateCam(); bmDirty = true;
+}
+new ResizeObserver(resize).observe(main);
+controls.addEventListener('change', () => { bmDirty = true; });
+renderer.setAnimationLoop(() => { controls.update(); renderFrame(); });
+
+/* ================= update ================= */
+let pending = false, lastSize = 0;
+function schedule() { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; update(); }); }
+function update() {
+  syncUI();
+  const s = state;
+  if (changed('geo', [s.binding, s.width, s.height, s.pages, s.leaf, s.board, s.overhang, s.spine, s.rounding, s.joint, s.openAngle, s.openAt, s.curl,
+    s.headband, s.ribbon, s.ribbonLen, s.pose])) {
+    const poseChanged = changed('pose', s.pose);
+    buildBook();
+    const size = Math.max(G.W, G.H, G.T);
+    if (poseChanged || !lastSize || Math.abs(size - lastSize) / lastSize > 0.25) { lastSize = size; setView('34'); }
+  }
+  applyLook(); placeSun(); updateCam(); updateLabel();
+  bmDirty = true;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+}
+function updateLabel() {
+  const s = state, g = G, n = v => (+v).toFixed(v < 10 ? 1 : 0);
+  const kick = g.hard ? 'Hardcover · ' + (g.round ? 'rounded spine' : 'square spine') : 'Paperback';
+  $('label').innerHTML = '';
+  const k = document.createElement('span'); k.className = 'kicker'; k.textContent = kick;
+  const b = document.createElement('b'); b.className = 'big'; b.textContent = `${s.width} × ${s.height}`;
+  const f = document.createElement('span'); f.className = 'fine';
+  f.textContent = `${s.pages} pages · spine ${g.T.toFixed(1)} mm · cover spread ${n(g.U)} × ${n(g.Hc)} mm`;
+  $('label').append(k, b, f);
+  $('specs').innerHTML = `Block ${g.Tp.toFixed(1)} mm thick<br>Spine width ${g.S.toFixed(1)} mm<br>Cover spread ${g.U.toFixed(1)} × ${g.Hc.toFixed(1)} mm`;
+}
+
+/* ================= files ================= */
+const statusEl = $('status');
+const say = t => { statusEl.textContent = t; clearTimeout(say.t); say.t = setTimeout(() => statusEl.textContent = '', 4000); };
+async function offerFile(filename, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  say('Saved ' + filename);
+}
+const COUNTER_KEY = 'gutenberg-export-count';
+let exportCount = 0;
+try { exportCount = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10) || 0; } catch {}
+function exportName(ext) {
+  exportCount = exportCount % 999 + 1;
+  try { localStorage.setItem(COUNTER_KEY, String(exportCount)); } catch {}
+  const t = new Date(), p = n => String(n).padStart(2, '0');
+  const stamp = p(t.getFullYear() % 100) + p(t.getMonth() + 1) + p(t.getDate()) + '_' + p(t.getHours()) + p(t.getMinutes()) + p(t.getSeconds());
+  return `${stamp}_GUTENBERG_${String(exportCount).padStart(3, '0')}.${ext}`;
+}
+
+// export settings
+const gl = renderer.getContext();
+const MAX_OUT = Math.min(MAX_TEX, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));
+const RES = [[2048, '2K · 2048 px'], [3840, '4K · 3840 px'], [6000, '6K · 6000 px'], [8192, '8K · 8192 px']].filter(r => r[0] <= MAX_OUT);
+const ASPECTS = [['stage', 'Same as stage'], ['1:1', 'Square 1:1'], ['4:5', 'Portrait 4:5'], ['2:3', 'Portrait 2:3'], ['3:2', 'Landscape 3:2'], ['16:9', 'Wide 16:9'], ['9:16', 'Story 9:16']];
+const EX_KEY = 'gutenberg-export';
+const EX = {res: 3840, aspect: 'stage', frame: 'fit', bg: 'transparent'};
+try { Object.assign(EX, JSON.parse(localStorage.getItem(EX_KEY) || '{}')); } catch {}
+if (!RES.some(r => r[0] === EX.res)) EX.res = RES[RES.length - 1][0];
+for (const [v, t] of RES) $('exRes').add(new Option(t.toUpperCase(), v));
+for (const [v, t] of ASPECTS) $('exAspect').add(new Option(t.toUpperCase(), v));
+for (const o of $('exFrame').options) o.text = o.text.toUpperCase();
+const syncEx = () => {
+  $('exRes').value = EX.res; $('exAspect').value = EX.aspect; $('exFrame').value = EX.frame;
+  for (const b of document.querySelectorAll('[data-bg]')) b.setAttribute('aria-pressed', String(b.dataset.bg === EX.bg));
+  try { localStorage.setItem(EX_KEY, JSON.stringify(EX)); } catch {}
+};
+$('exRes').onchange = e => { EX.res = +e.target.value; syncEx(); };
+$('exAspect').onchange = e => { EX.aspect = e.target.value; syncEx(); };
+$('exFrame').onchange = e => { EX.frame = e.target.value; syncEx(); };
+for (const b of document.querySelectorAll('[data-bg]')) b.onclick = () => { EX.bg = b.dataset.bg; syncEx(); };
+syncEx();
+
+/* PNG export at the chosen size. Same camera direction, lens, light and style as the stage;
+   textures and the shadow map are redrawn at high resolution for the shot. */
+function savePNG() {
+  const L = EX.res, ar = EX.aspect === 'stage' ? stageW / stageH : (([a, b]) => a / b)(EX.aspect.split(':').map(Number));
+  const W = ar >= 1 ? L : Math.round(L * ar), H = ar >= 1 ? Math.round(L / ar) : L;
+  say(`Rendering ${W} × ${H} PNG…`);
+  setTimeout(() => {
+    const saved = {pos: camera.position.clone(), q: camera.quaternion.clone(), target: controls.target.clone(), aspect: camera.aspect, fov: camera.fov, near: camera.near, far: camera.far};
+    const savedPPM = texPPM;
+    try {
+      texPPM = 26; applyLook(); setShadowSize(4096);
+      setRenderSize(W, H, 1);
+      edgeMat.uniforms.uWide.value = Math.max(1, Math.round(LINE_PX * W / stageW / 1.5));
+      camera.aspect = W / H;
+      if (EX.frame === 'fit') {
+        const {c, dir, dist} = frameDistance(W / H, 1.08);
+        camera.position.copy(c).addScaledVector(dir, dist); camera.lookAt(c);
+        camera.near = Math.max(1, dist / 100); camera.far = dist * 50;
+      } else if (camera.aspect < saved.aspect) {   // narrower: widen the lens so the sides still fit
+        camera.fov = 2 * Math.atan(Math.tan(saved.fov * D2R / 2) * saved.aspect / camera.aspect) / D2R;
+      }
+      camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+      const transparent = EX.bg === 'transparent';
+      const out = mkCanvas(W, H);
+      if (state.style === 'bitmap') { EXPORT = {canvas: out, w: W, h: H, scale: W / stageW, transparent}; renderFrame(true); }
+      else {
+        const cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
+        if (transparent) renderer.setClearColor(0x000000, 0);
+        renderFrame(transparent);
+        out.getContext('2d').drawImage(renderer.domElement, 0, 0);
+        renderer.setClearColor(cc, ca);
+      }
+      out.toBlob(b => b ? offerFile(exportName('png'), b) : say('The image was too large for this browser. Try a smaller size.'), 'image/png');
+    } catch (e) { say('Could not render: ' + e.message); }
+    finally {
+      EXPORT = null; texPPM = savedPPM; setShadowSize(2048);
+      camera.position.copy(saved.pos); camera.quaternion.copy(saved.q); controls.target.copy(saved.target);
+      camera.fov = saved.fov; camera.near = saved.near; camera.far = saved.far;
+      resize(); applyLook(); controls.update(); bmDirty = true;
+    }
+  }, 40);
+}
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+document.querySelector('#export kbd').textContent = isMac ? 'cmd + S' : 'ctrl + S';
+$('export').onclick = savePNG;
+addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); savePNG(); } });
+
+// print template for the cover spread, matching how "One cover spread" artwork is placed
+function saveTemplate() {
+  const g = G, bl = state.artMode === 'wrap' ? state.bleed : 3, W = g.U + 2 * bl, H = g.Hc + 2 * bl, f = v => +v.toFixed(2);
+  const x = v => f(v + bl), hinge = g.st + g.j;
+  const lines = [], labels = [];
+  const vline = (u, cls) => lines.push(`<line class="${cls}" x1="${x(u)}" y1="0" x2="${x(u)}" y2="${f(H)}"/>`);
+  vline(g.Pw, 'fold'); vline(g.Pw + g.S, 'fold');
+  if (g.hard) { vline(g.Pw - hinge, 'hinge'); vline(g.Pw + g.S + hinge, 'hinge'); }
+  const lab = (u, y, t) => labels.push(`<text x="${x(u)}" y="${f(y)}">${t}</text>`);
+  lab(g.Pw / 2, bl + g.Hc / 2, 'BACK'); lab(g.Pw + g.S + g.Pw / 2, bl + g.Hc / 2, 'FRONT');
+  labels.push(`<text x="${x(g.Pw + g.S / 2)}" y="${f(bl + g.Hc / 2)}" transform="rotate(90 ${x(g.Pw + g.S / 2)} ${f(bl + g.Hc / 2)})">SPINE ${g.S.toFixed(1)} MM</text>`);
+  lab(g.Pw / 2, bl + g.Hc / 2 + 8, `${g.Pw.toFixed(1)} × ${g.Hc.toFixed(1)} MM`);
+  lab(g.Pw + g.S + g.Pw / 2, bl + g.Hc / 2 + 8, `${g.Pw.toFixed(1)} × ${g.Hc.toFixed(1)} MM`);
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${f(W)}mm" height="${f(H)}mm" viewBox="0 0 ${f(W)} ${f(H)}">
+<style>.bleed{fill:#ffd9d9}.trim{fill:#ffffff;stroke:#e0245e;stroke-width:.25}.fold{stroke:#1d6fe0;stroke-width:.25;stroke-dasharray:2 1}
+.hinge{stroke:#999;stroke-width:.2;stroke-dasharray:.6 .6}text{font:4px Helvetica,Arial,sans-serif;fill:#333;text-anchor:middle;letter-spacing:.2px}</style>
+<rect class="bleed" width="${f(W)}" height="${f(H)}"/>
+<rect class="trim" x="${f(bl)}" y="${f(bl)}" width="${f(g.U)}" height="${f(g.Hc)}"/>
+${lines.join('\n')}
+${labels.join('\n')}
+<text x="${f(W / 2)}" y="${f(bl / 2 + 1.4)}" style="font-size:2.6px">COVER SPREAD ${g.U.toFixed(1)} × ${g.Hc.toFixed(1)} MM + ${bl} MM BLEED · ${state.pages} PP · ${g.hard ? 'HARDCOVER' : 'PAPERBACK'}</text>
+</svg>`;
+  offerFile(`gutenberg-cover-template-${Math.round(g.U)}x${Math.round(g.Hc)}.svg`, new Blob([svg], {type: 'image/svg+xml'}));
+}
+
+// designs: every setting plus the uploaded pictures in one JSON file
+$('saveDesign').onclick = () => {
+  const images = {}; for (const k in IMG) images[k] = {src: IMG[k].src, name: IMG[k].name};
+  const name = (state.title || 'book').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'book';
+  offerFile(`${name}.gutenberg.json`, new Blob([JSON.stringify({app: 'gutenberg', version: 1, state, images})], {type: 'application/json'}));
+};
+$('openDesign').onclick = () => $('designFile').click();
+$('designFile').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  f.text().then(t => {
+    const d = JSON.parse(t); if (!d || !d.state) throw new Error('not a Gutenberg design');
+    Object.assign(state, DEFAULTS); loadState(d.state);
+    for (const k of Object.keys(IMG)) delete IMG[k];
+    const imgs = Object.entries(d.images || {});
+    let left = imgs.length; const done = () => { if (--left <= 0) { saveImages(); loadFont(); schedule(); say('Opened ' + f.name); } };
+    if (!left) { left = 1; done(); }
+    for (const [k, v] of imgs) setImage(k, v.src, v.name, done);
+  }).catch(err => say('Could not open: ' + err.message));
+  e.target.value = '';
+};
+
+$('fit').onclick = fitView;
+$('reset').onclick = () => { Object.assign(state, DEFAULTS); loadFont(); schedule(); };
+const PALETTES = [['#1d3a57', '#efe4cc'], ['#7a1f24', '#f3e6c8'], ['#0f0f0f', '#f2f2f2'], ['#e8dcc4', '#1a1a1a'], ['#2f4a3a', '#e9d9a6'],
+  ['#d9532b', '#fff6e8'], ['#f1c84b', '#1b1b1b'], ['#3b2d5b', '#f0c7a0'], ['#ffffff', '#c1272d'], ['#9bb7c9', '#14213d'], ['#b85c38', '#f5efe0']];
+$('random').onclick = () => {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const t = pick(TRIMS.slice(1)), [bg, fg] = pick(PALETTES), hard = Math.random() < 0.55;
+  Object.assign(state, {binding: hard ? 'hard' : 'paper', trim: t[0], width: t[2], height: t[3], pages: 2 * Math.round(40 + Math.random() * 300),
+    frontColor: bg, spineColor: bg, backColor: bg, textColor: fg, font: pick(FONTS.slice(0, 9)), weight: pick(['400', '600', '700']),
+    finish: pick(Object.keys(FINISHES)), foil: hard && Math.random() < 0.4 ? pick(['gold', 'silver', 'copper']) : 'ink',
+    caps: Math.random() < 0.4, titlePos: Math.round(15 + Math.random() * 40), align: Math.random() < 0.75 ? 'center' : 'left',
+    spine: Math.random() < 0.6 ? 'round' : 'square', edge: Math.random() < 0.2 ? pick(['sprayed', 'gilded']) : 'plain',
+    edgeColor: pick(['#a3262a', '#1d3a57', '#d6a43b', '#0f0f0f', '#e06c3c']), headbandColor: pick(['#b8312f', '#efe4cc', '#1d3a57', '#c9a227']),
+    ribbon: hard && Math.random() < 0.4, ribbonColor: pick(['#7a1f24', '#1d3a57', '#c9a227', '#2f4a3a'])});
+  state.trim = t[0]; loadFont(); schedule();
+};
+
+/* ================= start ================= */
+try {
+  const saved = JSON.parse(localStorage.getItem(IMG_KEY) || 'null') || {};
+  for (const [k, v] of Object.entries(saved)) if (v && v.src) setImage(k, v.src, v.name, schedule);
+} catch {}
+resize(); loadFont(); update(); setView('34');
+if (document.fonts) document.fonts.ready.then(() => { fontsV++; schedule(); });
+</script>
+</html>
